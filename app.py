@@ -206,28 +206,27 @@ def stop_following(follow_id):
 
     return redirect(f"/users/{g.user.id}/following")
 
-# ***************************************************************
-@app.route('/users/profile', methods=["GET", "POST"])
-def profile():
+
+@app.route('/users/profile/<int:user_id>', methods=["GET", "POST"])
+def profile(user_id):
     """Update profile for current user."""
 
-    user = User.query.get(session[CURR_USER_KEY])
-    if 'user_id' not in session:
-        return redirect('/login')
+    # if 'user_id' not in session:
+    #     return redirect('/login')
 
     form = EditForm()
     if form.validate_on_submit():
-        user.username = form.username.data,
-        user.email = form.email.data,
-        user.image_url = form.image_url.data or User.image_url.default.arg,
-        user.header_image_url = form.header_image_url.data or User.header_image_url.default.arg,
-        user.bio = form.bio.data,
-        user.pasword = form.password.data
+        g.user.username = form.username.data,
+        g.user.email = form.email.data,
+        g.user.image_url = form.image_url.data or User.image_url.default.arg,
+        g.user.header_image_url = form.header_image_url.data or User.header_image_url.default.arg,
+        g.user.bio = form.bio.data,
+        g.user.pasword = form.password.data
 
         db.session.commit()
         return redirect(f'/users/{user_id}')
 
-    return render_template('users/edit.html', form=form)
+    return render_template('users/edit.html', form=form, user_id=user_id)
 
 # ***************************************************************
 
