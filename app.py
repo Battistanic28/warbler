@@ -150,7 +150,8 @@ def users_show(user_id):
                 .order_by(Message.timestamp.desc())
                 .limit(100)
                 .all())
-    return render_template('users/show.html', user=user, messages=messages)
+    likes = [msg.id for msg in user.likes]
+    return render_template('users/show.html', user=user, messages=messages, likes=likes)
 
 
 @app.route('/users/<int:user_id>/following')
@@ -211,20 +212,23 @@ def stop_following(follow_id):
 def profile(user_id):
     """Update profile for current user."""
 
-    # if 'user_id' not in session:
-    #     return redirect('/login')
+    if user_id not in session.values():
+        return redirect('/login')
 
-    form = EditForm()
+    form = EditForm(obj=g.user)
+
     if form.validate_on_submit():
-        g.user.username = form.username.data,
-        g.user.email = form.email.data,
-        g.user.image_url = form.image_url.data or User.image_url.default.arg,
-        g.user.header_image_url = form.header_image_url.data or User.header_image_url.default.arg,
-        g.user.bio = form.bio.data,
-        g.user.pasword = form.password.data
+        if User.authenticate(g.user.username, form.password.data):
+            g.user.username = form.username.data
+            g.user.email = form.email.data
+            g.user.image_url = form.image_url.data or User.image_url.default.arg
+            g.user.header_image_url = form.header_image_url.data or User.header_image_url.default.arg
+            g.user.bio = form.bio.data
 
-        db.session.commit()
-        return redirect(f'/users/{user_id}')
+            db.session.commit()
+            return redirect(f'/users/{user_id}')
+
+        flash("Incorrect password. Please try again", 'danger')
 
     return render_template('users/edit.html', form=form, user_id=user_id)
 
@@ -297,17 +301,25 @@ def messages_destroy(message_id):
 ##############################################################################
 # Likes routes:
 
-@app.route('/users/add_like/<int:msg_id>', methods=["POST"])
+@app.route('/users/<int:msg_id>/like', methods=["POST"])
 def add_like(msg_id):
     """Add like."""
 
-    if g.user:
-        like = Likes(user_id=g.user.id, message_id=msg_id)
+    if not g.user:
+        return redirect('/login')
 
+    user_likes = g.user.likes
+    like = Likes(user_id=g.user.id, message_id=msg_id)
+
+    if like in user_likes:
+        db.session.delete(like)
+
+    else:
         db.session.add(like)
-        db.session.commit()
+    
+    db.session.commit()
 
-        return redirect('/')
+    return redirect('/')
 
 
 ##############################################################################
@@ -330,8 +342,10 @@ def homepage():
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
+        
+        likes = [msg.id for msg in g.user.likes]
 
-        return render_template('home.html', messages=messages)
+        return render_template('home.html', messages=messages, likes=likes)
 
     else:
         return render_template('home-anon.html')
