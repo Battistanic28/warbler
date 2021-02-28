@@ -309,13 +309,14 @@ def add_like(msg_id):
         return redirect('/login')
 
     user_likes = g.user.likes
-    like = Likes(user_id=g.user.id, message_id=msg_id)
 
-    if like in user_likes:
-        db.session.delete(like)
+    msg = Message.query.get_or_404(msg_id)
+    if msg in user_likes:
+        db.session.delete(msg)
 
     else:
-        db.session.add(like)
+        like_msg = Likes(user_id=g.user.id, message_id=msg_id)
+        db.session.add(like_msg)
     
     db.session.commit()
 
