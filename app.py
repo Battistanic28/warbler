@@ -20,7 +20,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
-toolbar = DebugToolbarExtension(app)
+# toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
 
@@ -309,6 +309,9 @@ def add_like(msg_id):
         return redirect('/login')
 
     user_likes = g.user.likes
+    liked_message = Message.query.get_or_404(msg_id)
+    if liked_message.user_id == g.user.id:
+        return redirect('/')
 
     msg = Message.query.get_or_404(msg_id)
     if msg in user_likes:
@@ -323,6 +326,16 @@ def add_like(msg_id):
     return redirect('/')
 
 
+@app.route('/users/<int:user_id>/likes')
+def show_likes(user_id):
+    """Display all messages liked by current user."""
+
+    if g.user:
+        user = User.query.get_or_404(user_id)
+
+        return render_template('messages/likes.html', likes=user.likes)
+
+
 ##############################################################################
 # Homepage and error pages
 
@@ -334,7 +347,6 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
-############## Needed help here #################
     if g.user:
         following_ids = [following.id for following in g.user.following] + [g.user.id]
         messages = (Message
